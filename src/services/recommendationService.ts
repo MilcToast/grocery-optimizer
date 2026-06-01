@@ -62,7 +62,7 @@ async function getStoreTotals(items : string[]) {
  * @return A score where lower is better (total price + distance penalty)
  */
 function calculateScore(totalPrice: number, distance: number): number {
-  const distanceWeight = 0.2; // Weight for distance in the score (Each km equates to $0.20)
+  const distancePenaltyPerKM = 0.2; // Weight for distance in the score (Each km equates to $0.20)
 
-  return totalPrice + distance * distanceWeight;
+  return totalPrice + distance * distancePenaltyPerKM;
 }
