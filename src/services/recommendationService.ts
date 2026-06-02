@@ -26,8 +26,6 @@ export async function recommendStore(items: string[], userLat: number, userLon: 
 
   scoredStores.sort((a, b) => a.score - b.score);
 
-  console.log(scoredStores);
-
   return scoredStores[0];
 }
 /*
