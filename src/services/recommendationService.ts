@@ -13,9 +13,9 @@ export async function recommendStore(items: string[], userLat: number, userLon: 
   const stores = await getStoreTotals(items);
   
   const scoredStores = stores.map(store => {
-    const distance = haversineDistance(userLat, userLon, store.lat, store.lng);
+    const distance = Number(haversineDistance(userLat, userLon, store.lat, store.lng).toFixed(3));
 
-    const score = calculateScore(Number(store.total_price), distance);
+    const score = Number(calculateScore(Number(store.total_price), distance).toFixed(3));
 
     return {
       ...store,
