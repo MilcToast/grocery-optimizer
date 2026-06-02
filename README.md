@@ -173,6 +173,3 @@ Planned:
 * Detailed price breakdowns
 * Store comparison views
 * Deployment
-
-```
-```
