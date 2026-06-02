@@ -7,7 +7,7 @@ import { haversineDistance } from "../utils/distance";
  * @param items - List of items that user wants to buy
  * @param userLat - User's latitude
  * @param userLon - User's longitude
- * @return The recommended store with the lowest score (total price + distance penalty)
+ * @return An object containing the best store and two alternatives, each with total price and distance
  */
 export async function recommendStore(items: string[], userLat: number, userLon: number) {
   const stores = await getStoreTotals(items);
@@ -24,9 +24,12 @@ export async function recommendStore(items: string[], userLat: number, userLon: 
     }
   });
 
-  scoredStores.sort((a, b) => a.score - b.score);
+  const sortedStores = [...scoredStores].sort((a, b) => a.score - b.score);
 
-  return scoredStores[0];
+  return {
+    "best": sortedStores[0],
+    "alternatives": sortedStores.slice(1, 3)
+  };
 }
 /*
  * Returns store for which the total price of the items is the lowest
