@@ -30,6 +30,6 @@ export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2
  * @param degrees - The angle in degrees
  * @returns The angle in radians
  */
-export function toRadians(degrees: number): number {
+function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
