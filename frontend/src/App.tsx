@@ -1,121 +1,232 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useState, type SubmitEvent } from 'react'
 import './App.css'
 
+type CartItem = {
+  id: number
+  product: string
+  quantity: string
+}
+
+type RecommendationResult = {
+  best?: {
+    name?: string
+    total_price?: string | number
+    distance?: number
+    score?: number
+  }
+  alternatives?: Array<{
+    name?: string
+    total_price?: string | number
+    distance?: number
+    score?: number
+  }>
+}
+
+const starterItems: CartItem[] = [{ id: 1, product: 'milk', quantity: '1' }]
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [items, setItems] = useState<CartItem[]>(starterItems)
+  const [lat, setLat] = useState('49.2827')
+  const [lng, setLng] = useState('-123.1207')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<RecommendationResult | null>(null)
+
+  const updateItem = (id: number, field: 'product' | 'quantity', value: string) => {
+    setItems((currentItems) =>
+      currentItems.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
+    )
+  }
+
+  const addRow = () => {
+    setItems((currentItems) => [
+      ...currentItems,
+      { id: Date.now(), product: '', quantity: '1' },
+    ])
+  }
+
+  const removeRow = (id: number) => {
+    setItems((currentItems) => {
+      if (currentItems.length === 1) {
+        return currentItems
+      }
+
+      return currentItems.filter((item) => item.id !== id)
+    })
+  }
+
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError('')
+    setResult(null)
+
+    const normalizedItems = items.flatMap(({ product, quantity }) => {
+      const trimmedProduct = product.trim()
+      const parsedQuantity = Math.floor(Number(quantity))
+
+      if (!trimmedProduct || Number.isNaN(parsedQuantity) || parsedQuantity <= 0) {
+        return []
+      }
+
+      return Array.from({ length: parsedQuantity }, () => trimmedProduct)
+    })
+
+    if (normalizedItems.length === 0) {
+      setError('Add at least one valid product and quantity.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch('http://localhost:3000/recommend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: normalizedItems,
+          lat: Number(lat),
+          lng: Number(lng),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to get a recommendation right now.')
+      }
+
+      setResult(data)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Something went wrong.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+    <main className="app-shell">
+      <section className="card">
+        <h1>Grocery Optimizer</h1>
+        <p className="intro">
+          Add the products you want to buy, choose a quantity for each one, and let the
+          recommendation engine suggest the best store.
+        </p>
+
+        <form onSubmit={handleSubmit} className="recommendation-form">
+          <div className="location-grid">
+            <label>
+              <span>Latitude</span>
+              <input
+                type="number"
+                step="0.0001"
+                value={lat}
+                onChange={(event) => setLat(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>Longitude</span>
+              <input
+                type="number"
+                step="0.0001"
+                value={lng}
+                onChange={(event) => setLng(event.target.value)}
+              />
+            </label>
+          </div>
+
+          <table className="items-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <input
+                      type="text"
+                      value={item.product}
+                      placeholder="e.g. milk"
+                      onChange={(event) => updateItem(item.id, 'product', event.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(event) => updateItem(item.id, 'quantity', event.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="remove-button"
+                      onClick={() => removeRow(item.id)}
+                      disabled={items.length === 1}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="actions">
+            <button type="button" className="secondary-button" onClick={addRow}>
+              Add item
+            </button>
+            <button type="submit" className="primary-button">
+              {loading ? 'Searching…' : 'Get recommendation'}
+            </button>
+          </div>
+        </form>
+
+        {error ? (
+          <p className="error-message" role="alert">
+            {error}
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+        ) : null}
+
+        {result ? (
+          <section className="result-panel">
+            <h2>Recommendation result</h2>
+            {result.best ? (
+              <>
+                <p className="result-title">{result.best.name || 'Best store'}</p>
+                <ul>
+                  <li>Total price: {result.best.total_price}</li>
+                  <li>Distance: {result.best.distance} km</li>
+                  <li>Score: {result.best.score}</li>
+                </ul>
+              </>
+            ) : (
+              <p>No best store could be determined.</p>
+            )}
+
+            {result.alternatives && result.alternatives.length > 0 ? (
+              <div className="alternatives">
+                <h3>Alternatives</h3>
+                <ul>
+                  {result.alternatives.map((alternative, index) => (
+                    <li key={`${alternative.name || 'store'}-${index}`}>
+                      <strong>{alternative.name || 'Store'}</strong> - {alternative.total_price} ·{' '}
+                      {alternative.distance} km · score {alternative.score}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
       </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
