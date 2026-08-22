@@ -19,7 +19,7 @@ Current functionality includes:
 * Price aggregation across shopping lists
 * Store ranking based on total basket cost and travel distance
 * REST API endpoint for retrieving recommendations
-* React frontend (in progress)
+* React frontend (basic)
 
 ---
 
@@ -135,16 +135,32 @@ Request:
 }
 ```
 
-Response:
+Response (top 3 recommendations):
 
 ```json
-{
-  "id": 5,
-  "name": "Walmart Metrotown",
-  "total_price": "14.77",
-  "distance": 9.88,
-  "score": 16.75
-}
+[
+  {
+    "id": 5,
+    "name": "Walmart Metrotown",
+    "total_price": "14.77",
+    "distance": 9.88,
+    "score": 16.75
+  },
+  {
+    "id": 2,
+    "name": "Safeway Downtown",
+    "total_price": "15.20",
+    "distance": 1.45,
+    "score": 16.65
+  },
+  {
+    "id": 8,
+    "name": "No Frills Kitsilano",
+    "total_price": "15.90",
+    "distance": 3.10,
+    "score": 19.00
+  }
+]
 ```
 
 ---
@@ -159,12 +175,12 @@ Completed:
 * Recommendation engine
 * Distance-aware ranking
 * Express API
+* React frontend (basic)
+* Top-3 store recommendations
 
 In Progress:
 
-* React frontend
 * Improved API validation
-* Top-N store recommendations
 
 Planned:
 
