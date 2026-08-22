@@ -1,6 +1,8 @@
 import { useState, type SubmitEvent } from 'react'
 import './App.css'
 
+const API_URL = import.meta.env.VITE_API_URL
+
 type CartItem = {
   id: number
   product: string
@@ -79,7 +81,7 @@ function App() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:3000/recommend', {
+      const response = await fetch(`${API_URL}/recommend`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +184,7 @@ function App() {
             <button type="button" className="secondary-button" onClick={addRow}>
               Add item
             </button>
-            <button type="submit" className="primary-button">
+            <button type="submit" className="primary-button" disabled={loading}>
               {loading ? 'Searching…' : 'Get recommendation'}
             </button>
           </div>
