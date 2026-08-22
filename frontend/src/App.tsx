@@ -24,6 +24,11 @@ type RecommendationResult = {
   }>
 }
 
+type RequestItem = { 
+  product: string
+  quantity: number 
+}
+
 const starterItems: CartItem[] = [{ id: 1, product: 'milk', quantity: '1' }]
 
 function App() {
@@ -62,19 +67,20 @@ function App() {
     setError('')
     setResult(null)
 
-    const normalizedItems = items.flatMap(({ product, quantity }) => {
-      const trimmedProduct = product.trim()
-      const parsedQuantity = Math.floor(Number(quantity))
+    const normalizedItems: RequestItem[] = items
+      .map(({ product, quantity }) => {
+        const trimmedProduct = product.trim()
+        const parsedQuantity = Math.floor(Number(quantity))
 
-      if (!trimmedProduct || Number.isNaN(parsedQuantity) || parsedQuantity <= 0) {
-        return []
-      }
-
-      return Array.from({ length: parsedQuantity }, () => trimmedProduct)
-    })
+        return {
+          product: trimmedProduct,
+          quantity: Number.isNaN(parsedQuantity) || parsedQuantity <= 0 ? 0 : parsedQuantity,
+        }
+      })
+      .filter((it) => it.product && it.quantity > 0)
 
     if (normalizedItems.length === 0) {
-      setError('Add at least one valid product and quantity.')
+      setError('Add at least one valid product with quantity > 0.')
       return
     }
 

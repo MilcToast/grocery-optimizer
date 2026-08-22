@@ -9,7 +9,7 @@ import { haversineDistance } from "../utils/distance";
  * @param userLon - User's longitude
  * @return An object containing the best store and two alternatives, each with total price and distance
  */
-export async function recommendStore(items: string[], userLat: number, userLon: number) {
+export async function recommendStore(items: { product: string; quantity: number }[], userLat: number, userLon: number) {
   const stores = await getStoreTotals(items);
   
   const scoredStores = stores.map(store => {
@@ -36,23 +36,30 @@ export async function recommendStore(items: string[], userLat: number, userLon: 
  *
  * @param items - List of items that user wants to buy
  */
-async function getStoreTotals(items : string[]) {
+async function getStoreTotals(items: { product: string; quantity: number }[]) {
+  // Use jsonb_to_recordset to pass products+quantities into the query safely
+  const itemsJson = JSON.stringify(items);
+
   const result = await pool.query(
-    `SELECT 
+    `WITH requested AS (
+      SELECT r.product, r.quantity
+      FROM jsonb_to_recordset($1::jsonb) AS r(product text, quantity int)
+    )
+    SELECT 
       s.id,
       s.name,
       s.lat,
       s.lng,
-      SUM(sp.price) AS total_price
+      SUM(sp.price * req.quantity) AS total_price
     FROM store_prices sp
     JOIN stores s ON s.id = sp.store_id
     JOIN products p ON p.id = sp.product_id
-    WHERE p.name = ANY($1)
+    JOIN requested req ON req.product = p.name
     GROUP BY s.id, s.name, s.lat, s.lng
     ORDER BY total_price ASC;
-    `, [items]);
+    `, [itemsJson]);
 
-    return result.rows;
+  return result.rows;
 }
 
 /*

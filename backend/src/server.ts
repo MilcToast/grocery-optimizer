@@ -44,13 +44,22 @@ app.post("/recommend", async (req, res) => {
   try {
     const { items, lat, lng } = req.body;
 
-    if (!items || !lat || !lng) {
+    if (!items || !Array.isArray(items) || !lat || !lng) {
       return res.status(400).json({
-        error: "Missing required fields: items, lat, lng"
+        error: "Missing or invalid required fields: items, lat, lng"
       });
     }
 
-    const result = await recommendStore(items, lat, lng);
+    // Validate item shapes: { product: string, quantity: number }
+    const validItems = items.filter((it: any) =>
+      it && typeof it.product === 'string' && it.product.trim() && Number.isFinite(it.quantity) && it.quantity > 0
+    ).map((it: any) => ({ product: it.product.trim(), quantity: Math.floor(Number(it.quantity)) }));
+
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: 'No valid items provided' });
+    }
+
+    const result = await recommendStore(validItems, lat, lng);
 
     res.json(result);
   } catch (error) {
