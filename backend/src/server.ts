@@ -4,6 +4,17 @@ import { recommendStore } from "./services/recommendationService";
 const app = express();
 const PORT = 3000;
 
+type RequestItem = {
+  product: string;
+  quantity: number;
+};
+
+type RecommendRequest = {
+  items: RequestItem[];
+  lat: number;
+  lng: number;
+};
+
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -35,31 +46,106 @@ app.get("/health", (_req, res) => {
  * - lng: User's longitude
  * Example request body:
  *  {
- *   "items": ["milk", "bread", "eggs"],
+ *   "items": [
+ *      { "product": "milk", "quantity": 2 },
+        { "product": "bread", "quantity": 1 },
+        { "product": "eggs", "quantity": 12 }
+      ],
  *   "lat": 40.7128,
  *   "lng": -74.0060 
  *  }
  */
 app.post("/recommend", async (req, res) => {
   try {
-    const { items, lat, lng } = req.body;
+    const { items, lat, lng } = req.body as Partial<RecommendRequest>;
 
-    if (!items || !Array.isArray(items) || !lat || !lng) {
+    // Validate lat/lon
+    if (
+      typeof lat !== "number" ||
+      typeof lng !== "number" ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      lat < -90 ||
+      lat > 90 ||
+      lng < -180 ||
+      lng > 180
+    ) {
       return res.status(400).json({
-        error: "Missing or invalid required fields: items, lat, lng"
+        error: "Invalid latitude or longitude",
       });
     }
 
-    // Validate item shapes: { product: string, quantity: number }
-    const validItems = items.filter((it: any) =>
-      it && typeof it.product === 'string' && it.product.trim() && Number.isFinite(it.quantity) && it.quantity > 0
-    ).map((it: any) => ({ product: it.product.trim(), quantity: Math.floor(Number(it.quantity)) }));
-
-    if (validItems.length === 0) {
-      return res.status(400).json({ error: 'No valid items provided' });
+    // Validate presence of items in array
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: "At least one item is required",
+      });
     }
 
-    const result = await recommendStore(validItems, lat, lng);
+    // Validate each row and return detailed errors
+    const validationErrors: Array<{ index: number; product?: unknown; quantity?: unknown; message: string }> = []
+
+    items.forEach((item, index) => {
+      if (!item || typeof item !== "object") {
+        validationErrors.push({
+          index,
+          message: "Invalid item object",
+        });
+        return;
+      }
+
+      const product = item.product;
+      const quantity = item.quantity;
+
+      if (typeof product !== "string" || !product.trim()) {
+        validationErrors.push({
+          index,
+          product,
+          quantity,
+          message: "Product name cannot be empty",
+        });
+        return;
+      }
+
+      if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
+        validationErrors.push({
+          index,
+          product,
+          quantity,
+          message: "Quantity must be a number",
+        });
+        return;
+      }
+
+      if (!Number.isInteger(quantity)) {
+        validationErrors.push({
+          index,
+          product,
+          quantity,
+          message: "Quantity must be an integer",
+        });
+        return;
+      }
+
+      if (quantity <= 0) {
+        validationErrors.push({
+          index,
+          product,
+          quantity,
+          message: "Quantity must be greater than zero",
+        });
+      }
+    });
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        errors: validationErrors,
+      });
+    }
+
+    const normalizedItems = items.map((item) => ({ product: item.product.trim(), quantity: Math.floor(Number(item.quantity)) }))
+
+    const result = await recommendStore(normalizedItems, lat, lng);
 
     res.json(result);
   } catch (error) {
