@@ -129,13 +129,22 @@ Request:
 
 ```json
 {
-  "items": ["milk", "eggs", "rice"],
+  "items": [
+    { "product": "milk", "quantity": 2 },
+    { "product": "eggs", "quantity": 1 },
+    { "product": "rice", "quantity": 3 }
+  ],
   "lat": 49.2827,
   "lng": -123.1207
 }
 ```
 
-Response (top 3 recommendations):
+Notes:
+- The frontend now sends objects with `product` and integer `quantity` (no client-side expansion of repeated names).
+- The backend multiplies each product price by its quantity when computing store totals.
+- The endpoint returns the top 3 recommended stores (lower score is better).
+
+Successful Response (top 3 recommendations):
 
 ```json
 [
@@ -163,6 +172,21 @@ Response (top 3 recommendations):
 ]
 ```
 
+Validation errors:
+
+If the request contains invalid rows (empty product, non-number quantity, non-integer, or quantity ≤ 0), the server responds with HTTP 400 and a detailed `errors` array indicating the row indices and messages. Example:
+
+```json
+{
+  "errors": [
+    { "index": 0, "message": "Product name cannot be empty" },
+    { "index": 2, "message": "Quantity must be an integer" }
+  ]
+}
+```
+
+The frontend performs the same validations client-side and will surface inline row errors before sending requests.
+
 ---
 
 ## Current Status
@@ -177,10 +201,13 @@ Completed:
 * Express API
 * React frontend (basic)
 * Top-3 store recommendations
+* Improved API validation (server + client)
+* Frontend: per-row validation and disabled submit while loading
+* Backend: accept `{product, quantity}` payload and multiply price × quantity
 
 In Progress:
 
-* Improved API validation
+* Integrate small real-world dataset (replace synthetic numbers)
 
 Planned:
 
