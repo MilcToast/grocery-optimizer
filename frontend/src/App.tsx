@@ -111,10 +111,7 @@ function App() {
     items.forEach((row) => {
       const trimmed = row.product.trim()
       const raw = row.quantity
-      console.log('Product:', row.product)
-console.log('Quantity raw:', raw)
-console.log('Quantity type:', typeof raw)
-console.log('Parsed quantity:', Number(raw))
+      
       if (!trimmed) {
         newRowErrors[row.id] = 'Product name cannot be empty.'
         return
