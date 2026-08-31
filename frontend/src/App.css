@@ -5,7 +5,7 @@
   --bg-app: #f8fafc;
   --surface-card: #ffffff;
   --surface-input: #ffffff;
-  
+
   /* Text Colors (High Contrast) */
   --text-h: #0f172a;
   --text: #334155;
@@ -70,10 +70,25 @@
   gap: 20px;
 }
 
-.location-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+.location-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.address-field {
+  width: 100%;
+}
+
+.location-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.location-status {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 label {
@@ -241,10 +256,6 @@ input::placeholder {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .location-grid {
-    grid-template-columns: 1fr;
-  }
-
   .actions {
     flex-direction: column;
   }

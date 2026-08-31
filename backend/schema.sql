@@ -12,10 +12,10 @@ DROP TABLE IF EXISTS stores;
 -- =========================================
 
 CREATE TABLE stores (
-    id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,  
     name TEXT NOT NULL UNIQUE,
     lat DOUBLE PRECISION NOT NULL,
-    lng DOUBLE PRECISION NOT NULL
+    lon DOUBLE PRECISION NOT NULL
 );
 
 -- =========================================

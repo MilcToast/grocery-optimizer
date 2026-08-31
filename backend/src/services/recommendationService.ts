@@ -11,9 +11,9 @@ import { haversineDistance } from "../utils/distance";
  */
 export async function recommendStore(items: { product: string; quantity: number }[], userLat: number, userLon: number) {
   const stores = await getStoreTotals(items);
-  
+
   const scoredStores = stores.map(store => {
-    const distance = Number(haversineDistance(userLat, userLon, store.lat, store.lng).toFixed(3));
+    const distance = Number(haversineDistance(userLat, userLon, store.lat, store.lon).toFixed(3));
 
     const score = Number(calculateScore(Number(store.total_price), distance).toFixed(3));
 
@@ -49,13 +49,13 @@ async function getStoreTotals(items: { product: string; quantity: number }[]) {
       s.id,
       s.name,
       s.lat,
-      s.lng,
+      s.lon,
       SUM(sp.price * req.quantity) AS total_price
     FROM store_prices sp
     JOIN stores s ON s.id = sp.store_id
     JOIN products p ON p.id = sp.product_id
     JOIN requested req ON req.product = p.name
-    GROUP BY s.id, s.name, s.lat, s.lng
+    GROUP BY s.id, s.name, s.lat, s.lon
     ORDER BY total_price ASC;
     `, [itemsJson]);
 

@@ -1,7 +1,7 @@
 import React, { useState, type SubmitEvent } from 'react'
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 type CartItem = {
   id: number
@@ -29,6 +29,11 @@ type RequestItem = {
   quantity: number
 }
 
+type Coordinates = {
+  lat: number
+  lon: number
+}
+
 type ServerValidationError = {
   index: number
   product?: string
@@ -40,8 +45,9 @@ const starterItems: CartItem[] = [{ id: 1, product: 'milk', quantity: '1' }]
 
 function App() {
   const [items, setItems] = useState<CartItem[]>(starterItems)
-  const [lat, setLat] = useState('49.2827')
-  const [lng, setLng] = useState('-123.1207')
+  const [address, setAddress] = useState('')
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null)
+  const [locationLabel, setLocationLabel] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [rowErrors, setRowErrors] = useState<Record<number, string>>({})
@@ -82,36 +88,113 @@ function App() {
     })
   }
 
+  const resolveCoordinates = async (): Promise<Coordinates> => {
+    if (coordinates) {
+      return coordinates
+    }
+
+    const trimmedAddress = address.trim()
+
+    if (trimmedAddress) {
+      const geocodeResponse = await fetch(`${API_URL}/api/geocode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address: trimmedAddress }),
+      })
+
+      const geocodeData = await geocodeResponse.json()
+
+      if (!geocodeResponse.ok) {
+        throw new Error(geocodeData.error || 'Unable to find that address.')
+      }
+
+      const lat = Number(geocodeData.lat)
+      const lon = Number(geocodeData.lon)
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        throw new Error('Unable to find coordinates for that address.')
+      }
+
+      const resolvedCoordinates = { lat, lon }
+      setCoordinates(resolvedCoordinates)
+      setLocationLabel(`Using address: ${trimmedAddress}`)
+      return resolvedCoordinates
+    }
+
+    if (!navigator.geolocation) {
+      throw new Error('This browser does not support geolocation.')
+    }
+
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const nextCoordinates = {
+            lat: coords.latitude,
+            lon: coords.longitude,
+          }
+
+          setCoordinates(nextCoordinates)
+          setAddress('')
+          setLocationLabel(`Using your current location (${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)})`)
+          resolve(nextCoordinates)
+        },
+        (geoError) => {
+          reject(new Error(geoError.message || 'Unable to access your location.'))
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        },
+      )
+    })
+  }
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setError('This browser does not support geolocation.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const nextCoordinates = {
+          lat: coords.latitude,
+          lon: coords.longitude,
+        }
+
+        setCoordinates(nextCoordinates)
+        setAddress('')
+        setLocationLabel(`Using your current location (${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)})`)
+        setLoading(false)
+      },
+      (geoError) => {
+        setLoading(false)
+        setError(geoError.message || 'Unable to access your location.')
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      },
+    )
+  }
+
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
     setResult(null)
 
-    // Validate latitude and longitude
-    const parsedLat = Number(lat)
-    const parsedLng = Number(lng)
-
-    if (
-      !Number.isFinite(parsedLat) ||
-      !Number.isFinite(parsedLng) ||
-      parsedLat < -90 ||
-      parsedLat > 90 ||
-      parsedLng < -180 ||
-      parsedLng > 180
-    ) {
-      setError('Enter a valid latitude and longitude.')
-      return
-    }
-
-    // Per-row validation: reject empty product names, invalid quantities,
-    // non-integer quantities, and quantities <= 0.
     const newRowErrors: Record<number, string> = {}
     const normalizedItems: RequestItem[] = []
 
     items.forEach((row) => {
       const trimmed = row.product.trim()
       const raw = row.quantity
-      
+
       if (!trimmed) {
         newRowErrors[row.id] = 'Product name cannot be empty.'
         return
@@ -150,15 +233,17 @@ function App() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/recommend`, {
+      const targetCoordinates = await resolveCoordinates()
+
+      const response = await fetch(`${API_URL}/api/recommend`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           items: normalizedItems,
-          lat: Number(lat),
-          lng: Number(lng),
+          lat: targetCoordinates.lat,
+          lon: targetCoordinates.lon,
         }),
       })
 
@@ -199,25 +284,33 @@ function App() {
         </p>
 
         <form onSubmit={handleSubmit} className="recommendation-form">
-          <div className="location-grid">
-            <label>
-              <span>Latitude</span>
+          <div className="location-panel">
+            <label className="address-field">
+              <span>Address</span>
               <input
-                type="number"
-                step="0.0001"
-                value={lat}
-                onChange={(event) => setLat(event.target.value)}
+                type="text"
+                value={address}
+                placeholder="123 Main St, Vancouver, BC"
+                onChange={(event) => {
+                  setAddress(event.target.value)
+                  setCoordinates(null)
+                  setLocationLabel('')
+                }}
               />
             </label>
-            <label>
-              <span>Longitude</span>
-              <input
-                type="number"
-                step="0.0001"
-                value={lng}
-                onChange={(event) => setLng(event.target.value)}
-              />
-            </label>
+
+            <div className="location-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleUseMyLocation}
+                disabled={loading}
+              >
+                Use my location
+              </button>
+            </div>
+
+            {locationLabel ? <p className="location-status">{locationLabel}</p> : null}
           </div>
 
           <table className="items-table">
@@ -319,7 +412,7 @@ function App() {
           </section>
         ) : null}
       </section>
-    </main >
+    </main>
   )
 }
 

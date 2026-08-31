@@ -52,7 +52,7 @@ stores
 ├── id
 ├── name
 ├── lat
-└── lng
+└── lon
 ```
 
 ### Products
@@ -135,7 +135,7 @@ Request:
     { "product": "rice", "quantity": 3 }
   ],
   "lat": 49.2827,
-  "lng": -123.1207
+  "lon": -123.1207
 }
 ```
 

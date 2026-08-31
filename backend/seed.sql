@@ -4,7 +4,7 @@
 -- STORES
 -- =========================
 
-INSERT INTO stores (name, lat, lng) VALUES
+INSERT INTO stores (name, lat, lon) VALUES
 ('No Frills Downtown', 49.2790, -123.1180),
 ('Safeway UBC', 49.2665, -123.2490),
 ('T&T Richmond', 49.1830, -123.1360),
