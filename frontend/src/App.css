@@ -5,7 +5,7 @@
   --bg-app: #f8fafc;
   --surface-card: #ffffff;
   --surface-input: #ffffff;
-  
+
   /* Text Colors (High Contrast) */
   --text-h: #0f172a;
   --text: #334155;
@@ -85,7 +85,8 @@ label {
   color: var(--text-h);
 }
 
-input {
+input,
+select {
   border: 1px solid var(--border);
   background-color: var(--surface-input);
   border-radius: 10px;
@@ -96,7 +97,8 @@ input {
 }
 
 /* Clear, accessible focus states for inputs */
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring-focus);
@@ -133,6 +135,11 @@ input::placeholder {
 }
 
 .items-table input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.items-table select {
   width: 100%;
   box-sizing: border-box;
 }

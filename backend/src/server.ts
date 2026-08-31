@@ -1,5 +1,6 @@
 import express from "express";
 import { recommendStore } from "./services/recommendationService";
+import { getAllProductNames } from "./repositories/productRepository";
 
 const app = express();
 const PORT = 3000;
@@ -36,6 +37,19 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 })
+
+/*
+ * Returns all products for frontend form options
+ */
+app.get("/products", async (_req, res) => {
+  try {
+    const products = await getAllProductNames();
+    res.json({ products });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "internal server error" });
+  }
+});
 
 /*
  * Endpoint to recommend the best store based on total price and distance

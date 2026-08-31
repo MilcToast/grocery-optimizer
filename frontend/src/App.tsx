@@ -1,4 +1,4 @@
-import React, { useState, type SubmitEvent } from 'react'
+import React, { useEffect, useState, type SubmitEvent } from 'react'
 import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -36,7 +36,11 @@ type ServerValidationError = {
   message: string
 }
 
-const starterItems: CartItem[] = [{ id: 1, product: 'milk', quantity: '1' }]
+type ProductsResponse = {
+  products?: string[]
+}
+
+const starterItems: CartItem[] = [{ id: 1, product: '', quantity: '1' }]
 
 function App() {
   const [items, setItems] = useState<CartItem[]>(starterItems)
@@ -46,6 +50,55 @@ function App() {
   const [error, setError] = useState('')
   const [rowErrors, setRowErrors] = useState<Record<number, string>>({})
   const [result, setResult] = useState<RecommendationResult | null>(null)
+  const [productOptions, setProductOptions] = useState<string[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [productsError, setProductsError] = useState('')
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadProducts = async () => {
+      setProductsLoading(true)
+      setProductsError('')
+
+      try {
+        const response = await fetch(`${API_URL}/products`)
+        const data = (await response.json()) as ProductsResponse
+
+        if (!response.ok) {
+          throw new Error('Unable to load products.')
+        }
+
+        const products = Array.isArray(data.products) ? data.products : []
+
+        if (!isActive) return
+
+        setProductOptions(products)
+
+        // Give an initial default selection so the first row is usable immediately.
+        if (products.length > 0) {
+          setItems((currentItems) =>
+            currentItems.map((item) =>
+              item.product.trim() ? item : { ...item, product: products[0] },
+            ),
+          )
+        }
+      } catch {
+        if (!isActive) return
+        setProductsError('Could not load product list. Try refreshing the page.')
+      } finally {
+        if (isActive) {
+          setProductsLoading(false)
+        }
+      }
+    }
+
+    void loadProducts()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   const updateItem = (id: number, field: 'product' | 'quantity', value: string) => {
     setItems((currentItems) =>
@@ -62,7 +115,7 @@ function App() {
   const addRow = () => {
     setItems((currentItems) => [
       ...currentItems,
-      { id: Date.now(), product: '', quantity: '1' },
+      { id: Date.now(), product: productOptions[0] ?? '', quantity: '1' },
     ])
   }
 
@@ -111,7 +164,7 @@ function App() {
     items.forEach((row) => {
       const trimmed = row.product.trim()
       const raw = row.quantity
-      
+
       if (!trimmed) {
         newRowErrors[row.id] = 'Product name cannot be empty.'
         return
@@ -233,12 +286,20 @@ function App() {
                 <React.Fragment key={item.id}>
                   <tr>
                     <td>
-                      <input
-                        type="text"
+                      <select
                         value={item.product}
-                        placeholder="e.g. milk"
                         onChange={(event) => updateItem(item.id, 'product', event.target.value)}
-                      />
+                        disabled={productsLoading || productOptions.length === 0}
+                      >
+                        <option value="" disabled>
+                          {productsLoading ? 'Loading products...' : 'Select a product'}
+                        </option>
+                        {productOptions.map((productName) => (
+                          <option key={productName} value={productName}>
+                            {productName}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td>
                       <input
@@ -270,6 +331,12 @@ function App() {
               ))}
             </tbody>
           </table>
+
+          {productsError ? (
+            <p className="error-message" role="alert">
+              {productsError}
+            </p>
+          ) : null}
 
           <div className="actions">
             <button type="button" className="secondary-button" onClick={addRow}>

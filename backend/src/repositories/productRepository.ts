@@ -12,3 +12,14 @@ export async function getProductByName(name : string) {
 
   return result.rows[0];
 }
+
+/*
+ * Returns all product names ordered alphabetically
+ */
+export async function getAllProductNames() {
+  const result = await pool.query<{ name: string }>(
+    "SELECT name FROM products ORDER BY name ASC"
+  );
+
+  return result.rows.map((row) => row.name);
+}
